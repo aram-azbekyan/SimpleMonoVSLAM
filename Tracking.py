@@ -1,8 +1,13 @@
 import cv2
 import numpy as np
 
+import rospy
+import tf
+import tf2_ros
+import geometry_msgs.msg
+
 # initialize ORB detector
-orb = cv2.ORB_create(nfeatures=1000)
+orb = cv2.ORB_create(nfeatures=5000)
 
 # initiazize Brute-force matcher
 matcher = cv2.BFMatcher(cv2.NORM_HAMMING, crossCheck=True)
@@ -18,6 +23,7 @@ class Tracking:
 		self.frames = {}
 		self.cur_t = None
 		self.cur_R = None
+		self.br = tf2_ros.TransformBroadcaster()
 
 	def addView(self, im, newP):
 		""" Add new view to a list. """
@@ -59,3 +65,18 @@ class Tracking:
 		points, R, t, mask = cv2.recoverPose(E, kp_new, kp_old, focal=camera.fx, pp=camera.pp)
 
 		return R, t
+
+	def handle_camera_pose(self, rvec, tvec):
+		t = geometry_msgs.msg.TransformStamped()
+		t.header.stamp = rospy.Time.now()
+		t.header.frame_id = "map"
+		t.child_frame_id = "camera_pose"
+		t.transform.translation.x = tvec[0]
+		t.transform.translation.y = tvec[2]
+		t.transform.translation.z = tvec[1]
+		# q = tf.transformations.quaternion_from_euler(rvec[0][0], rvec[0][1], rvec[0][2])
+		t.transform.rotation.x = 0
+		t.transform.rotation.y = 0
+		t.transform.rotation.z = 0
+		t.transform.rotation.w = 1
+		self.br.sendTransform(t)

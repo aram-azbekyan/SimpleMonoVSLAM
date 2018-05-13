@@ -6,8 +6,8 @@ class Camera:
 	def __init__(self):
 		self.fx = 601.605896
 		self.fy = 598.708191
-		self.cx = 325.557796
-		self.cy = 221.742447
+		self.cx = 320.0
+		self.cy = 240.0
 		self.pp = (self.cx, self.cy)
 		self.K = np.array([[self.fx,   0,         self.cx],
 						   [0,         self.fy,   self.cy],

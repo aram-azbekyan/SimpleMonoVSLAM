@@ -1,5 +1,6 @@
 import numpy as np
 import rospy
+from roslib import message
 import std_msgs.msg
 from sensor_msgs.msg import PointCloud2
 import sensor_msgs.point_cloud2 as pcl2
@@ -11,7 +12,7 @@ class PointCloud:
 	"""
 	def __init__(self):
 		self.pc_pub = rospy.Publisher('cloud_stream',
-					  PointCloud2, queue_size=20)
+					  PointCloud2, queue_size=10)
 
 	def updatePc(self, pts3d):
 		""" Process 3d points obtained from triangulation step
@@ -23,7 +24,5 @@ class PointCloud:
 		self.h.frame_id = 'map'
 
 		# eliminate 4th (W) coordinate and compile a message
-		pts_list = pts3d[:3].T
-		pts_list.tolist()
-		cloud = pcl2.create_cloud_xyz32(self.h, pts_list)
+		cloud = pcl2.create_cloud_xyz32(self.h, pts3d)
 		self.pc_pub.publish(cloud)

@@ -18,57 +18,43 @@ print('Ctrl-C to close program')
 
 # initializations
 model = Camera()  # camera model
+ds_cam = DatasetCamera()
 tr = Tracking()     # tracking module
 mp = Mapping()    # mapping module
 pc = PointCloud() # point cloud
 rospy.init_node('cloud_stream', anonymous=True)
 
 # video capture object
-cap = cv2.VideoCapture(1)
+# cap = cv2.VideoCapture(0)
 
-# nframes = 0
+for im_id in xrange(108):
 
-while(True):
-	# capture frame-by-frame
-	ret, frame = cap.read()
+	im = cv2.imread('./dataset/image_00/data/'+str(im_id).zfill(10)+'.png', 0)
 
-	# nframes += 1
-	# if nframes % 10 != 0:
-	# 	continue
-
-	undist_im = undistortFrame(frame, model, to_gray=True)
-
-	if tr.nViews == 0:
-		# first view incoming
-		Rt = np.array([[1,0,0,0],
-					  [0,1,0,0],
-					  [0,0,1,0]]) # Identity matrix
-		P = np.dot(model.K, Rt)
-		tr.addView(undist_im, P)
-	elif tr.nViews == 1:
-		kp_new, kp_old, matches = tr.matchImgs(undist_im, tr.frames[tr.nViews-1], show_matches=False)
-		R, t = tr.calculatePose(kp_new, kp_old, model)
-		tr.cur_t = 0.01 * np.dot(-R.T,t)
-		tr.cur_R = R.T
-		Rt = np.append(tr.cur_R, tr.cur_t, axis=1)
-		P = np.dot(model.K,Rt)
-		tr.addView(undist_im, P)
+	if im_id == 0:
+		tr.kp_old = detector.detect(im)
+		tr.kp_old = np.array([ x.pt for x in tr.kp_old], dtype=np.float32)
+		tr.addView(im)
+	elif im_id == 1:
+		tr.featureTracking(im)
+		tr.cur_R, tr.cur_t = tr.calculatePose(ds_cam)
+		tr.cur_t = tr.cur_t * 0.2
+		tr.kp_old = tr.kp_new
+		tr.lastRt = np.append(tr.cur_R, tr.cur_t, axis=1)
+		tr.addView(im)
 	else:
-		# track new pose
-		kp_new, kp_old, matches = tr.matchImgs(undist_im, tr.frames[tr.nViews-1], show_matches=False)
-		R, t = tr.calculatePose(kp_new, kp_old, model)
-		tr.cur_t = tr.cur_t + 0.01 * np.dot(-R.T,t)
-		tr.cur_R = np.dot(R.T, tr.cur_R)
+		tr.featureTracking(im)
+		R, t = tr.calculatePose(ds_cam)
+		tr.cur_t = tr.cur_t + 0.2 * tr.cur_R.dot(t)
+		tr.cur_R = R.dot(tr.cur_R)
+		rvec = cv2.Rodrigues(tr.cur_R)
+		tr.handle_camera_pose(tr.cur_t, rvec)
 		Rt = np.append(tr.cur_R, tr.cur_t, axis=1)
-		P = np.dot(model.K,Rt)
-		tr.addView(undist_im, Rt)
-		rvec = cv2.Rodrigues(Rt[:,:-1])
-		tvec = Rt[:,-1:]
-		tr.handle_camera_pose(rvec,tvec)
-		# # triangulate features in 3D-space
-		# X = mp.triangulateCoords(Rt, lastRt, model, kp_new, kp_old)
-		# # update point-cloud
-		# pc.updatePc(X)
+		X = mp.triangulateCoords(Rt, tr.lastRt, ds_cam, tr.kp_new.T, tr.kp_old.T)
+		pc.updatePc(X)
+		tr.kp_old = detector.detect(im)
+		tr.kp_old = np.array([ x.pt for x in tr.kp_old], dtype=np.float32)
+		tr.addView(im)
 
 
 

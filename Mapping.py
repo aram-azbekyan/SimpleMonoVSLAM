@@ -24,7 +24,7 @@ class Mapping:
 
 		# make transition from homogeneous coordinates into Euclidean
 		newX = cv2.convertPointsFromHomogeneous(X_homog.T)
-		newX = [ x[0].tolist() for x in newX]
+		newX = [ x[0].tolist() for x in newX ]
 		# self.X.extend(newX)
 
 		return newX

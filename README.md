@@ -1,0 +1,3 @@
+# SimpleMonoVSLAM
+
+Unfinished project
